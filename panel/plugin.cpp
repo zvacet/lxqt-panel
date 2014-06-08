@@ -316,6 +316,12 @@ QMenu *Plugin::popupMenu() const
         connect(configAction, SIGNAL(triggered()), this, SLOT(showConfigureDialog()));
     }
 
+
+    //qDebug() << "PLUGIN MENU TRIGGERED!";
+
+    //autohide
+    //connect(menu, SIGNAL(destroyed()), this, SLOT(unsetAutoHideConfigLock()));
+
     QAction* moveAction = new QAction(XdgIcon::fromTheme("transform-move"), tr("Move \"%1\"").arg(name), menu);
     menu->addAction(moveAction);
     connect(moveAction, SIGNAL(triggered()), this, SIGNAL(startMove()));
@@ -327,6 +333,21 @@ QMenu *Plugin::popupMenu() const
     connect(removeAction, SIGNAL(triggered()), this, SLOT(requestRemove()));
 
     return menu;
+}
+
+
+void Plugin::unsetAutoHideConfigLock()
+{
+   // mPanel->autoHideUnlock();
+   // qDebug() << "ShOULD BE VERY VERY RIGHT";
+}
+
+void Plugin::setAutoHideConfigLock ()
+{
+
+    //qDebug() << "ShOULD BE VERY RIGHT";
+    //mPanel->setAutoHideConfigLock();
+    //mPanel->autoHideLock();
 }
 
 
@@ -370,7 +391,11 @@ void Plugin::showConfigureDialog()
     {
         dialog = mPlugin->configureDialog();
         ref = dialog;
-        connect(this, SIGNAL(destroyed()), dialog, SLOT(close()));
+
+//        connect(this, SIGNAL(destroyed()), dialog, SLOT(close()));
+
+        connect(dialog, SIGNAL(destroyed()), mPanel, SLOT(autoHideUnlock()));
+
     }
 
     if (!dialog)

@@ -42,7 +42,7 @@
 
 #include <QtCore/QDebug>
 #include <QtGui/QDesktopWidget>
-#include <QtGui/QMenu>
+//#include <QtGui/QMenu>
 #include <qtxdg/xdgicon.h>
 
 #include <qtxdg/xdgdirs.h>
@@ -133,15 +133,20 @@ LxQtPanel::LxQtPanel(const QString &configGroup, QWidget *parent) :
     connect(LxQt::Settings::globalSettings(), SIGNAL(settingsChanged()), this, SLOT(update()));
     connect(lxqtApp, SIGNAL(themeChanged()), this, SLOT(realign()));
 
+
+
     LxQtPanelApplication *app = reinterpret_cast<LxQtPanelApplication*>(qApp);
     mSettings = app->settings();
     readSettings();
     loadPlugins();
 
+    // startup apply show or hide
+    setAutohideActive(false);
+    autoHideUnlock();
+
     show();
 
-    // startup apply show or hide
-    setAutohideActive(mAutoHideTb);    
+
 }
 
 
@@ -335,13 +340,20 @@ void LxQtPanel::realign()
     QSize size = sizeHint();
     QRect rect;
 
+
+   // qDebug() << "realign, states: (active,configlock) " << mAutoHideActive << " -- " << mAutoHideConfigLock;
+
     if (isHorizontal())
     {
         // Horiz panel ***************************
 
         // Size .......................        
-        if (mAutoHideActive)
+
+        if (mAutoHideTb && mAutoHideActive && !mAutoHideConfigLock) {
+
+
             rect.setHeight(qMax(1, AUTOHIDETB_DEFAULT_HEIGHT));
+        }
         else
             rect.setHeight(qMax(PANEL_MINIMUM_SIZE, size.height()));
 
@@ -384,7 +396,7 @@ void LxQtPanel::realign()
         // Vert panel ***************************
 
         // Size .......................        
-        if (mAutoHideActive)
+        if (mAutoHideTb && mAutoHideActive && !mAutoHideConfigLock)
             rect.setWidth(qMax(1, AUTOHIDETB_DEFAULT_HEIGHT));
         else
             rect.setWidth(qMax(PANEL_MINIMUM_SIZE, size.width()));
@@ -609,6 +621,31 @@ void LxQtPanel::showConfigDialog()
 }
 
 
+void LxQtPanel::autoHideUnlock()
+{
+    qDebug() << " ----------------------------------- Unlock called";
+    if (isAutoHideConfigLock())
+    {
+        qDebug() << " -- Autohide omitted ";
+        unsetAutoHideConfigLock();
+    }
+    //mAutoHideLock = false;
+    mAutoHideActive = true;
+    emit realigned();
+    realign();
+}
+
+
+void LxQtPanel::autoHideLock()
+{
+    qDebug() << " ----------------------------------- Lock called";
+//    mAutoHideLock = true;
+    setAutoHideConfigLock();
+    emit realigned();
+    realign();
+}
+
+
 /************************************************
 
  ************************************************/
@@ -695,10 +732,10 @@ void LxQtPanel::setAutohide(bool value)
 
         // for showing the result immediately
         mAutoHideActive = value;
-
-        emit realigned();
     }
 
+    emit realigned();
+    realign();
 }
 
 
@@ -777,6 +814,9 @@ void LxQtPanel::setAutohideActive(bool value)
         return;
 
     mAutoHideActive = value;
+
+    qDebug () << "setAutohideActive: " << mAutoHideActive << " - " << mAutoHideConfigLock;
+    //emit realigned();
     realign();
 }
 
@@ -785,6 +825,124 @@ void LxQtPanel::setAutohideActive(bool value)
  ************************************************/
 void LxQtPanel::x11EventFilter(XEvent* event)
 {
+
+    //qDebug() << "General: has Childern: " << this->frameRect();
+
+    switch (event->type)
+    {
+
+    case Expose:
+    qDebug() << " --- EXPOSE" << event->type;
+    break;
+        // No test
+        case MapNotify:
+        qDebug() << " --- MAP" << event->type;
+        autoHideLock();
+        break;
+
+        case EnterNotify:
+        //autoHideLock();
+        //qDebug() << " --- MAP/EXPOSE" << event->type;
+        break;
+
+        case DestroyNotify:
+        qDebug() << " --- DESTROY" << event->type;
+        autoHideUnlock();
+        break;
+
+    //case leaveNotify:
+     //   qDebug() << " --- X11 LEAVE" << event->type;
+      //  break;
+
+    case MotionNotify:
+       // qDebug() << "Unwanted Event! --- !!";
+    break;
+
+  //  case EnterNotify:
+   //      qDebug() << " --- ENTER";
+    //     break;
+
+    case LeaveNotify:
+//        if(_mouseHandler)
+//            _mouseHandler->HandleInput(lDisplay, &XEvent);
+         qDebug() << " --- LEAVE";
+         break;
+
+
+    case 28:
+//qDebug() << "mytherious Event! --- !!";
+    break;
+    case 10:
+        case 18:
+        case 9:
+        case 11:
+    case 14:
+        break;
+        qDebug() << "Context closed? (1)";
+        break;
+
+
+            qDebug() << "Context closed? (2)";
+            break;
+
+            qDebug() << "Context opened? (1)";
+            break;
+
+            qDebug() << "Context opened? (2)";
+            break;
+
+
+
+        // qDebug() << "Unwanted Event! --- !!";
+     break;
+
+
+    //case MapNotify:
+     //    qDebug() << "map Event! --- !!";
+        break;
+
+
+         qDebug() << "map Event! --- !!";
+        break;
+
+        // If this is not the last expose event break
+//        if (XEvent.xexpose.count != 0)
+//            break;
+//        else
+//            break;
+         qDebug() << "expose Event! --- !!";
+         break;
+    case ConfigureNotify:
+         qDebug() << "Configure Event! --- !!";
+        break;
+    case VisibilityNotify:
+         qDebug() << "Visibility Event! --- !!";
+        break;
+
+    case ButtonPress:
+    case ButtonRelease:
+
+
+        break;
+
+        break;
+    case KeyPress:
+    case KeyRelease:
+//        if(_keyboardHandler)
+//            _keyboardHandler->HandleInput(lDisplay, &XEvent);
+        break;
+    case CreateNotify:
+qDebug() << "create Event! --- !!";
+        break;
+    default:
+//        if(_keyboardHandler)
+//            _keyboardHandler->HandleInput(lDisplay, &XEvent);
+         qDebug() << "unknown Event! --- !!" << event->type;
+        break;
+    }
+
+
+
     QList<Plugin*>::iterator i;
     for (i = mPlugins.begin(); i != mPlugins.end(); ++i)
         (*i)->x11EventFilter(event);
@@ -805,9 +963,11 @@ QRect LxQtPanel::globalGometry() const
  ************************************************/
 bool LxQtPanel::event(QEvent *event)
 {
+
     switch (event->type())
     {
     case QEvent::ContextMenu:
+        qDebug() << "CONTEXT MENU";
         showPopupMenu();
         break;
 
@@ -815,7 +975,30 @@ bool LxQtPanel::event(QEvent *event)
         realign();
         break;
 
+    case QEvent::Leave:
+           // qDebug() << "Mouse left...";
+            break;
+
+    case QEvent::Enter:
+        qDebug() << "QEvent ENTER";
+        //autoHideLock();
+        setAutohideActive(true);
+        break;
+
+    case QEvent::ChildAdded:
+        qDebug() << "            CHILD ADDED...";
+        break;
+
+    case QEvent::ChildPolished:
+        qDebug() << "            CHILD Polished...";
+        break;
+
+    case QEvent::ChildRemoved:
+        qDebug() << "            CHILD removed...";
+        break;
+
     default:
+        //qDebug() << "!!!There was an Qevent!!!" << event->type();
         break;
     }
     return QFrame::event(event);
@@ -847,9 +1030,15 @@ void LxQtPanel::dragEnterEvent(QDragEnterEvent *event)
 
 void LxQtPanel::leaveEvent(QEvent *event)
 {
-    setAutohideActive(true);
+    if (!mAutoHideConfigLock)
+        setAutohideActive(true);
 }
 
+
+void LxQtPanel::theTestFunc ()
+{
+    qDebug() << " OH BABY!!!!!!!!!!!!!!!!!!!1!";
+}
 
 /************************************************
 
@@ -882,6 +1071,17 @@ void LxQtPanel::showPopupMenu(Plugin *plugin)
     menu.addAction(tr("Configure Panel..."),
                    this, SLOT(showConfigDialog())
                   );
+
+    //connect(menu, SIGNAL(destroyed()), this, SLOT(autoHideUnlock()));
+    //connect(&menu,SIGNAL(hovered()),this, SLOT(theTestFunc()));
+//    connect(this,SLOT(theTestFunc()),&menu, SIGNAL(hovered()));
+    //connect(this, SLOT(theTestFunc()),&menu,SIGNAL(menuGehidet()));
+
+    qDebug() << " MAIN FUNCTION MENU TRIGGERED!" << pluginsMenus;
+
+    // autohide lock
+    //autoHideLock();
+
 
     menu.addAction(XdgIcon::fromTheme("preferences-plugin"),
                    tr("Add Panel Widgets..."),

@@ -108,7 +108,10 @@ LxQtMainMenu::~LxQtMainMenu()
 void LxQtMainMenu::showHideMenu()
 {
     if (mMenu && mMenu->isVisible())
+    {
         mMenu->hide();
+        qDebug() << "SHOW MAIN MENU";
+    }
     else
         showMenu();
 }
@@ -136,6 +139,9 @@ void LxQtMainMenu::shortcutChanged(const QString &/*oldShortcut*/, const QString
  ************************************************/
 void LxQtMainMenu::showMenu()
 {
+
+    qDebug() << "asdasd";
+
     if (!mMenu)
         return;
 

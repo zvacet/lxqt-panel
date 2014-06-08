@@ -88,7 +88,8 @@ public:
     int length() const { return mLength; }
     bool lengthInPercents() const { return mLengthInPercents; }
 
-    bool autohideTb() const {return mAutoHideTb; }
+    bool autohideTb() const {return mAutoHideTb; }    
+
 
     LxQtPanel::Alignment alignment() const { return mAlignment; }
     int screenNum() const { return mScreenNum; }
@@ -104,9 +105,19 @@ public slots:
     void setLength(int length, bool inPercents);
     void setPosition(int screen, ILxQtPanel::Position position);
     void setAlignment(LxQtPanel::Alignment value);
-    void setAutohide(bool value);
 
     void saveSettings(bool later=false);
+
+    // Autohide
+    void setAutohide(bool value);
+    void autoHideUnlock();
+    void autoHideLock();
+    //autohide
+    void setAutoHideConfigLock() { mAutoHideConfigLock = 1; }
+    void unsetAutoHideConfigLock () { mAutoHideConfigLock = 0; }
+    bool isAutoHideConfigLock () { return mAutoHideConfigLock; }
+
+    void theTestFunc ();
 
 signals:
     void realigned();
@@ -153,6 +164,7 @@ private:
 
     bool mAutoHideTb;
     bool mAutoHideActive;
+    bool mAutoHideConfigLock;
 
     LxQtPanel::Alignment mAlignment;
 
