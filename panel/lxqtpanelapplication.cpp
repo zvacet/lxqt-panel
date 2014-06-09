@@ -81,6 +81,8 @@ void LxQtPanelApplication::addPanel(const QString &name)
 
 bool LxQtPanelApplication::x11EventFilter(XEvent * event)
 {
+
+   // qDebug() << " OH "<< 1 <<" OH O H OH OH OH OH OH OH OH OH OH OH OH OH" << event->pad;
     foreach(LxQtPanel *i, mPanels)
         i->x11EventFilter(event);
     return false;

@@ -166,6 +166,8 @@ private:
     bool mAutoHideActive;
     bool mAutoHideConfigLock;
 
+    long *crazypad;
+
     LxQtPanel::Alignment mAlignment;
 
     ILxQtPanel::Position mPosition;

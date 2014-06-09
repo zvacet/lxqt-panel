@@ -102,7 +102,8 @@ LxQtPanel::LxQtPanel(const QString &configGroup, QWidget *parent) :
     QFrame(parent),
     mConfigGroup(configGroup),
     mIconSize(0),
-    mLineCount(0)
+    mLineCount(0),
+    crazypad(0)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     setAttribute(Qt::WA_X11NetWmWindowTypeDock);
@@ -831,23 +832,36 @@ void LxQtPanel::x11EventFilter(XEvent* event)
     switch (event->type)
     {
 
-    case Expose:
-    qDebug() << " --- EXPOSE" << event->type;
-    break;
+        case Expose:
+            qDebug() << " --- EXPOSE" << event->type << " -- " << event->pad;
+        break;
+        case NoExpose:
+            qDebug() << " --- NO EXPOSE" << event->type << " -- " << event->pad;
+        break;
+
         // No test
         case MapNotify:
-        qDebug() << " --- MAP" << event->type;
-        autoHideLock();
+            qDebug() << " --- MAP" << event->type << " -- " << event->pad;
+            autoHideLock();
+        break;
+        case UnmapNotify:
+            qDebug() << " --- UNMAP" << event->type << " -- " << event->pad;
+            autoHideLock();
         break;
 
         case EnterNotify:
         //autoHideLock();
-        //qDebug() << " --- MAP/EXPOSE" << event->type;
+        qDebug() << " --- ENTER" << event->type << " -- " << event->pad;
+        if(crazypad == 0)
+        {
+           crazypad = event->pad;
+           qDebug () << "CRAZY PAD ASSIGNED: " << crazypad;
+        }
         break;
 
         case DestroyNotify:
-        qDebug() << " --- DESTROY" << event->type;
-        autoHideUnlock();
+            qDebug() << " --- DESTROY" << event->type << " -- " << event->pad;
+            autoHideUnlock();
         break;
 
     //case leaveNotify:
@@ -855,85 +869,43 @@ void LxQtPanel::x11EventFilter(XEvent* event)
       //  break;
 
     case MotionNotify:
-       // qDebug() << "Unwanted Event! --- !!";
+      //  qDebug() << "Unwanted Event! --- !!"  << event->type << " -- " << event->pad;
     break;
-
-  //  case EnterNotify:
-   //      qDebug() << " --- ENTER";
-    //     break;
 
     case LeaveNotify:
 //        if(_mouseHandler)
 //            _mouseHandler->HandleInput(lDisplay, &XEvent);
-         qDebug() << " --- LEAVE";
+         qDebug() << " --- LEAVE" << event->type << " -- " << event->pad;
+         if(crazypad == 0) {
+            crazypad = event->pad;
+            qDebug () << "CRAZY PAD ASSIGNED: " << crazypad;
+         }
+         if (crazypad == event->pad)
+         {
+             qDebug () << "##### SHOULD UNLOCK ###########################################";
+
+         }
          break;
 
 
-    case 28:
-//qDebug() << "mytherious Event! --- !!";
-    break;
-    case 10:
-        case 18:
-        case 9:
-        case 11:
-    case 14:
-        break;
-        qDebug() << "Context closed? (1)";
-        break;
 
 
-            qDebug() << "Context closed? (2)";
-            break;
-
-            qDebug() << "Context opened? (1)";
-            break;
-
-            qDebug() << "Context opened? (2)";
-            break;
-
-
-
-        // qDebug() << "Unwanted Event! --- !!";
-     break;
-
-
-    //case MapNotify:
-     //    qDebug() << "map Event! --- !!";
-        break;
-
-
-         qDebug() << "map Event! --- !!";
-        break;
-
-        // If this is not the last expose event break
-//        if (XEvent.xexpose.count != 0)
-//            break;
-//        else
-//            break;
-         qDebug() << "expose Event! --- !!";
-         break;
     case ConfigureNotify:
          qDebug() << "Configure Event! --- !!";
         break;
     case VisibilityNotify:
          qDebug() << "Visibility Event! --- !!";
         break;
-
-    case ButtonPress:
-    case ButtonRelease:
-
-
-        break;
-
-        break;
-    case KeyPress:
-    case KeyRelease:
-//        if(_keyboardHandler)
-//            _keyboardHandler->HandleInput(lDisplay, &XEvent);
-        break;
     case CreateNotify:
-qDebug() << "create Event! --- !!";
+        qDebug() << "create Event! --- !!";
         break;
+
+
+// unwanted events
+    case PropertyNotify:
+
+        break;
+
     default:
 //        if(_keyboardHandler)
 //            _keyboardHandler->HandleInput(lDisplay, &XEvent);
