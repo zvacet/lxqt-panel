@@ -134,20 +134,23 @@ LxQtPanel::LxQtPanel(const QString &configGroup, QWidget *parent) :
     connect(LxQt::Settings::globalSettings(), SIGNAL(settingsChanged()), this, SLOT(update()));
     connect(lxqtApp, SIGNAL(themeChanged()), this, SLOT(realign()));
 
-
-
     LxQtPanelApplication *app = reinterpret_cast<LxQtPanelApplication*>(qApp);
     mSettings = app->settings();
     readSettings();
     loadPlugins();
 
     // startup apply show or hide
-    setAutohideActive(false);
+    setAutohideActive(true);
     autoHideUnlock();
+
+    prevEventFilter = QAbstractEventDispatcher::instance()->setEventFilter(LxQtPanel::sysEventFilter);
 
     show();
 
+    realign();
+    emit realigned();
 
+    qDebug() << "STARTED ------------------------------------ " << mAutoHideActive << " - root: " << QX11Info::appRootWindow();
 }
 
 
@@ -341,6 +344,7 @@ void LxQtPanel::realign()
     QSize size = sizeHint();
     QRect rect;
 
+    qDebug() << "REALIGN STATE: CFG/ACTIVE/CONFIG" << mAutoHideTb << " / " << mAutoHideActive << " / " << mAutoHideConfigLock;
 
    // qDebug() << "realign, states: (active,configlock) " << mAutoHideActive << " -- " << mAutoHideConfigLock;
 
@@ -735,8 +739,8 @@ void LxQtPanel::setAutohide(bool value)
         mAutoHideActive = value;
     }
 
-    emit realigned();
     realign();
+    emit realigned();
 }
 
 
@@ -821,6 +825,30 @@ void LxQtPanel::setAutohideActive(bool value)
     realign();
 }
 
+void LxQtPanel::setAutohideLeaveWorkaround(bool value)
+{
+
+    mAutoHideLeaveWorkaround = value;
+}
+
+bool LxQtPanel::isAutoHide()
+{
+    return mAutoHideActive && !mAutoHideConfigLock;
+}
+
+
+//bool LxQtPanel::eventFilter (QObject *obj, QEvent *event)
+//{
+// qDebug() << "EVENT FILTER CALLED";
+//}
+
+
+bool LxQtPanel::sysEventFilter(void* message)
+{
+ qDebug("Event!");
+ return true;
+}
+
 /************************************************
 
  ************************************************/
@@ -832,47 +860,45 @@ void LxQtPanel::x11EventFilter(XEvent* event)
     switch (event->type)
     {
 
-        case Expose:
-            qDebug() << " --- EXPOSE" << event->type << " -- " << event->pad;
-        break;
-        case NoExpose:
-            qDebug() << " --- NO EXPOSE" << event->type << " -- " << event->pad;
-        break;
+//        case Expose:
+////qDebug() << " --- EXPOSE" << event->type << " -- " << event->pad;
+//        break;
+//        case NoExpose:
+////qDebug() << " --- NO EXPOSE" << event->type << " -- " << event->pad;
+//        break;
 
         // No test
         case MapNotify:
             qDebug() << " --- MAP" << event->type << " -- " << event->pad;
-            autoHideLock();
+          //  autoHideLock();
         break;
         case UnmapNotify:
             qDebug() << " --- UNMAP" << event->type << " -- " << event->pad;
-            autoHideLock();
+            if (crazypad == event->pad)
+            {
+                qDebug () << "##### SHOULD UNLOCK FROM UNMAP ###########################################";
+                //setAutohide(true);
+
+            }
+          //  autoHideLock();
         break;
 
         case EnterNotify:
-        //autoHideLock();
-        qDebug() << " --- ENTER" << event->type << " -- " << event->pad;
-        if(crazypad == 0)
-        {
-           crazypad = event->pad;
-           qDebug () << "CRAZY PAD ASSIGNED: " << crazypad;
-        }
+            //autoHideLock();
+            qDebug() << " --- ENTER" << event->type << " -- " << event->pad;
+            if(crazypad == 0)
+            {
+               crazypad = event->pad;
+               qDebug () << "CRAZY PAD ASSIGNED: " << crazypad;
+            }
+//            if (isAutoHide())
+//            {
+//                setAutohide(false);
+//                setAutohideLeaveWorkaround(true);
+//            }
         break;
 
-        case DestroyNotify:
-            qDebug() << " --- DESTROY" << event->type << " -- " << event->pad;
-            autoHideUnlock();
-        break;
-
-    //case leaveNotify:
-     //   qDebug() << " --- X11 LEAVE" << event->type;
-      //  break;
-
-    case MotionNotify:
-      //  qDebug() << "Unwanted Event! --- !!"  << event->type << " -- " << event->pad;
-    break;
-
-    case LeaveNotify:
+ //       case LeaveNotify:
 //        if(_mouseHandler)
 //            _mouseHandler->HandleInput(lDisplay, &XEvent);
          qDebug() << " --- LEAVE" << event->type << " -- " << event->pad;
@@ -880,18 +906,39 @@ void LxQtPanel::x11EventFilter(XEvent* event)
             crazypad = event->pad;
             qDebug () << "CRAZY PAD ASSIGNED: " << crazypad;
          }
-         if (crazypad == event->pad)
-         {
-             qDebug () << "##### SHOULD UNLOCK ###########################################";
 
+         if (!mAutoHideLeaveWorkaround)
+         {
+            //setAutohide(true);
          }
+         setAutohideLeaveWorkaround(false);
+
          break;
+
+//        case DestroyNotify:
+            qDebug() << " --- DESTROY" << event->type << " -- " << event->pad;
+            //autoHideUnlock();
+
+            if (crazypad == event->pad)
+            {
+                qDebug () << "##### SHOULD UNLOCK FROM DESTROY ###########################################";
+                //setAutohide(true);
+
+            }
+        break;
+
+
+//    case MotionNotify:
+      //  qDebug() << "Unwanted Event! --- !!"  << event->type << " -- " << event->pad;
+    break;
+
+
 
 
 
 
     case ConfigureNotify:
-         qDebug() << "Configure Event! --- !!";
+  //       qDebug() << "Configure Event! --- !!";
         break;
     case VisibilityNotify:
          qDebug() << "Visibility Event! --- !!";
@@ -909,7 +956,7 @@ void LxQtPanel::x11EventFilter(XEvent* event)
     default:
 //        if(_keyboardHandler)
 //            _keyboardHandler->HandleInput(lDisplay, &XEvent);
-         qDebug() << "unknown Event! --- !!" << event->type;
+     //    qDebug() << "unknown Event! --- !!" << event->type;
         break;
     }
 
@@ -930,11 +977,18 @@ QRect LxQtPanel::globalGometry() const
 }
 
 
+void LxQtPanel:: mouseMoveEvent(QMouseEvent* event)
+{
+
+}
+
 /************************************************
 
  ************************************************/
 bool LxQtPanel::event(QEvent *event)
 {
+//return QFrame::event(event);
+    qDebug() << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!There was an Qevent!!!" << event->type();
 
     switch (event->type())
     {
@@ -952,9 +1006,9 @@ bool LxQtPanel::event(QEvent *event)
             break;
 
     case QEvent::Enter:
-        qDebug() << "QEvent ENTER";
+      //  qDebug() << "QEvent ENTER";
         //autoHideLock();
-        setAutohideActive(true);
+   //     setAutohideActive(true);
         break;
 
     case QEvent::ChildAdded:
@@ -990,7 +1044,7 @@ void LxQtPanel::showEvent(QShowEvent *event)
 void LxQtPanel::enterEvent(QEvent *event)
 {
 
-    setAutohideActive(false);
+    //setAutohideActive(false);
 }
 
 
@@ -1002,8 +1056,8 @@ void LxQtPanel::dragEnterEvent(QDragEnterEvent *event)
 
 void LxQtPanel::leaveEvent(QEvent *event)
 {
-    if (!mAutoHideConfigLock)
-        setAutohideActive(true);
+ //   if (!mAutoHideConfigLock)
+   //     setAutohideActive(true);
 }
 
 
