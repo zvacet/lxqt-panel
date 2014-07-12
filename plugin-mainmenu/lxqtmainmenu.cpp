@@ -37,6 +37,8 @@
 #include <QTimer>
 #include <QMessageBox>
 #include <QEvent>
+#include <QKeyEvent>
+#include <QApplication>
 #include <LXQt/PowerManager>
 #include <LXQt/ScreenSaver>
 #include <lxqt-globalkeys.h>
@@ -69,7 +71,8 @@ LxQtMainMenu::LxQtMainMenu(const ILxQtPanelPluginStartupInfo &startupInfo):
     ILxQtPanelPlugin(startupInfo),
     mMenu(0),
     mShortcut(0),
-    mLockCascadeChanges(false)
+    mLockCascadeChanges(false),
+    mMenuShown(false)
 {
 #ifdef HAVE_MENU_CACHE
     mMenuCache = NULL;
@@ -112,8 +115,15 @@ LxQtMainMenu::~LxQtMainMenu()
  ************************************************/
 void LxQtMainMenu::showHideMenu()
 {
-    if (mMenu && mMenu->isVisible())
-        mMenu->hide();
+	qDebug() << "showHideMenu" << mMenuShown;
+    if (mMenu && mMenuShown)
+    {
+#undef KeyPress
+        //QKeyEvent event(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+		//qDebug() << "sendEvent" << &event;
+        //QApplication::sendEvent(mMenu, &event);
+        // mMenu->hide();
+    }
     else
         showMenu();
 }
@@ -144,6 +154,7 @@ void LxQtMainMenu::showMenu()
     if (!mMenu)
         return;
 
+    mMenuShown = true;
     int x=0, y=0;
 
     switch (panel()->position())
@@ -262,6 +273,7 @@ void LxQtMainMenu::buildMenu()
 #else
     XdgMenuWidget *menu = new XdgMenuWidget(mXdgMenu, "", &mButton);
 #endif
+    connect(menu, SIGNAL(aboutToHide()), SLOT(menuAboutToHide()));
     menu->setObjectName("TopLevelMainMenu");
     menu->setStyle(&mTopMenuStyle);
 
@@ -300,6 +312,24 @@ bool LxQtMainMenu::eventFilter(QObject *obj, QEvent *event)
         }
     }
     return false;
+}
+/************************************************
+
+ ************************************************/
+
+void LxQtMainMenu::menuAboutToHide()
+{
+	qDebug() << "menuAboutToHide" ;
+    QTimer::singleShot(100, this, SLOT(updateMenuStatus()));
+}
+/************************************************
+
+ ************************************************/
+
+void LxQtMainMenu::updateMenuStatus()
+{
+	qDebug() << "updateMenuStatus";
+	mMenuShown = mMenu->isVisible();
 }
 
 #undef DEFAULT_SHORTCUT

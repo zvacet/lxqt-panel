@@ -94,6 +94,7 @@ private:
 #endif
 
     bool mLockCascadeChanges;
+    bool mMenuShown;
 
 protected slots:
 
@@ -104,6 +105,8 @@ private slots:
     void showMenu();
     void showHideMenu();
     void shortcutChanged(const QString &oldShortcut, const QString &newShortcut);
+    void menuAboutToHide();
+    void updateMenuStatus();
 };
 
 class LxQtMainMenuPluginLibrary: public QObject, public ILxQtPanelPluginLibrary
