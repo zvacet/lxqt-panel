@@ -85,6 +85,8 @@ public:
 
 public slots:
     void realign();
+    void setAutoHideConfigLock();
+    void unsetAutoHideConfigLock();
 
 signals:
     void startMove();

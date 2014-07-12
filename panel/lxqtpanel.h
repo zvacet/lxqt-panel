@@ -34,6 +34,7 @@
 #include <QTimer>
 #include "ilxqtpanel.h"
 #include "lxqtpanelglobals.h"
+#include <QAbstractEventDispatcher>
 
 class QMenu;
 class Plugin;
@@ -60,6 +61,7 @@ public:
     };
 
     LxQtPanel(const QString &configGroup, QWidget *parent = 0);
+    //explicit LxQtPanel(QObject *parent);
     virtual ~LxQtPanel();
 
     QString name() { return mConfigGroup; }
@@ -88,6 +90,11 @@ public:
     int lineCount() const { return mLineCount; }
     int length() const { return mLength; }
     bool lengthInPercents() const { return mLengthInPercents; }
+
+
+    bool autohideTb() const {return mAutoHideTb; }    
+
+
     LxQtPanel::Alignment alignment() const { return mAlignment; }
     int screenNum() const { return mScreenNum; }
 
@@ -106,6 +113,20 @@ public slots:
 
     void saveSettings(bool later=false);
 
+    // Autohide
+    void setAutohide(bool value);
+    bool isAutoHide();
+    void setAutohideLeaveWorkaround (bool value);
+
+    void autoHideUnlock();
+    void autoHideLock();
+    //autohide
+    void setAutoHideConfigLock() { mAutoHideConfigLock = 1; }
+    void unsetAutoHideConfigLock () { mAutoHideConfigLock = 0; }
+    bool isAutoHideConfigLock () { return mAutoHideConfigLock; }
+
+    void theTestFunc ();
+
 signals:
     void realigned();
     void deletedByUser(LxQtPanel *self);
@@ -113,6 +134,15 @@ signals:
 protected:
     bool event(QEvent *event);
     void showEvent(QShowEvent *event);
+    void enterEvent(QEvent *event);
+    void leaveEvent(QEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event);    
+
+    void mouseMoveEvent(QMouseEvent* event);
+   // bool eventFilter (QObject *obj, QEvent *event);
+
+    static bool sysEventFilter(void* message);
+    static QAbstractEventDispatcher::EventFilter prevEventFilter;
 
 private slots:
     void screensChangeds();
@@ -120,6 +150,7 @@ private slots:
     void showConfigDialog();
     void showAddPluginDialog();
     void realign();
+    void setAutohideActive(bool value);
     void removePlugin();
     void pluginMoved();
     void userRequestForDeletion();
@@ -145,6 +176,13 @@ private:
 
     int mLength;
     bool mLengthInPercents;
+
+    bool mAutoHideTb;
+    bool mAutoHideActive;
+    bool mAutoHideConfigLock;
+    bool mAutoHideLeaveWorkaround;
+
+    long *crazypad;
 
     LxQtPanel::Alignment mAlignment;
 

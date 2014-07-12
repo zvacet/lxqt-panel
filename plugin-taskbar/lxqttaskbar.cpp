@@ -75,6 +75,8 @@ LxQtTaskBar::LxQtTaskBar(ILxQtPanelPlugin *plugin, QWidget *parent) :
 
     mRootWindow = QX11Info::appRootWindow();
 
+    qDebug() << "TASKBAR root:" << mRootWindow;
+
     settingsChanged();
 }
 
@@ -107,6 +109,7 @@ bool LxQtTaskBar::windowOnActiveDesktop(Window window) const
         return true;
 
     XfitMan xf = xfitMan();
+
     int desktop = xf.getWindowDesktop(window);
     if (desktop == -1) // Show on all desktops
         return true;

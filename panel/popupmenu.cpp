@@ -31,6 +31,7 @@
 #include <QToolButton>
 #include <QEvent>
 #include <QKeyEvent>
+#include <QDebug>
 
 static const char POPUPMENU_TITLE[] = "POPUP_MENU_TITLE_OBJECT_NAME";
 
@@ -69,6 +70,18 @@ QAction* PopupMenu::addTitle(const QString &text)
     return addTitle(QIcon(), text);
 }
 
+//void PopupMenu::hideEvent(QHideEvent* e)
+//{
+//     qDebug() << "HIDE EVENT :::: " ;
+//     //this ->menuGehidet();
+//     emit destroyed();
+
+//}
+
+//void PopupMenu::menuGehidet()
+//{
+//    qDebug() << "TEST HIDE EVENT :::: " ;
+//}
 
 /************************************************
 
@@ -76,6 +89,8 @@ QAction* PopupMenu::addTitle(const QString &text)
 bool PopupMenu::eventFilter(QObject *object, QEvent *event)
 {
     Q_UNUSED(object);
+
+    //qDebug() << "POPUPMENU EVENT :::: " << event->type();
 
     if (event->type() == QEvent::Paint ||
         event->type() == QEvent::KeyPress ||
@@ -89,6 +104,12 @@ bool PopupMenu::eventFilter(QObject *object, QEvent *event)
     return true;
 }
 
+
+//void PopupMenu::destroyed()
+//{
+
+//    qDebug() << "JOP ZERSTÖRT";
+//}
 
 /************************************************
 

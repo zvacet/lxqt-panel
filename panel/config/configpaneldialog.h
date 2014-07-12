@@ -67,7 +67,6 @@ signals:
 public slots:
     void reset();
 
-
 private slots:
     void editChanged();
     void widthTypeChanged();
@@ -94,6 +93,7 @@ private:
     LxQtPanel::Alignment mOldAlignment;
     ILxQtPanel::Position mOldPosition;
     int mOldScreenNum;
+    bool mOldAutohideTb;
 };
 
 #endif // CONFIGPANELDIALOG_H

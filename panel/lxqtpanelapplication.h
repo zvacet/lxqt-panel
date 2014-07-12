@@ -35,6 +35,16 @@
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QAbstractNativeEventFilter>
 #endif
+// MANY_HEADERS >>
+#include "lxqtpanel.h"
+#include <LXQt/Settings>
+#include <QtDebug>
+#include <QUuid>
+//#include <LXQt/XfitMan>
+#include "lxqtxfitman.h"
+#include <QX11Info>
+#include <X11/Xlib.h>
+// << MANY_HEADERS
 
 class LxQtPanel;
 namespace LxQt {
@@ -64,6 +74,20 @@ public:
     int count() { return mPanels.count(); }
     LxQt::Settings *settings() { return mSettings; }
 
+    Display *xdisp;
+    Window isMain, r,p, *kids, isRealMain;
+    Window xparent;
+    Window xrootWindow;
+    Window *xchildren;
+    //quint32 xNumChildren;
+    XMotionEvent xmot;
+    XMapEvent xmap;
+    XUnmapEvent xunmap;
+    char *window_name, *win_name;
+    unsigned int numkids;
+    unsigned long event_mask;
+  //  XfitMan xf;
+
 public slots:
     void addNewPanel();
 
@@ -77,6 +101,9 @@ private slots:
 
 private:
     LxQt::Settings *mSettings;
+
+    bool isFirst;
+
 };
 
 

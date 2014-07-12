@@ -30,21 +30,39 @@
 #define POPUPMENU_H
 
 #include <QMenu>
+//#include <QEvent>
 #include "lxqtpanelglobals.h"
+
+//class QMenu;
 
 class LXQT_PANEL_API PopupMenu: public QMenu
 {
+    //Q_OBJECT
+
+
 public:
     explicit PopupMenu(QWidget *parent = 0): QMenu(parent) {}
-    explicit PopupMenu(const QString &title, QWidget *parent = 0): QMenu(title, parent) {}
+    explicit PopupMenu(const QString &title, QWidget *parent = 0): QMenu(title, parent) {  }
+    ~PopupMenu() { return ; }
 
     QAction* addTitle(const QIcon &icon, const QString &text);
     QAction* addTitle(const QString &text);
 
     bool eventFilter(QObject *object, QEvent *event);
 
-protected:
+signals:
+//    void destroyed ();
+//    void hovered();
+
+//public slots:
+//    void destroyed();
+
+//protected:
     virtual void keyPressEvent(QKeyEvent* e);
+//    virtual void hideEvent (QHideEvent* e);
+
+
+
 };
 
 #endif // POPUPMENU_H
