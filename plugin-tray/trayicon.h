@@ -33,6 +33,10 @@
 #include <QFrame>
 #include <QList>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include <QWindow>
+#endif
+
 #include <X11/X.h>
 #include <X11/extensions/Xdamage.h>
 
@@ -50,8 +54,13 @@ public:
     TrayIcon(Window iconId, QWidget* parent);
     virtual ~TrayIcon();
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    WId iconId() { return mIconWindow ? mIconWindow->winId() : 0; }
+    WId windowId() { return mContainer ? mContainer->effectiveWinId() : 0; }
+#else // deprecated, for Qt4 only
     Window iconId() { return mIconId; }
     Window windowId() { return mWindowId; }
+#endif
 
     bool isValid() const { return mValid; }
 
@@ -67,8 +76,13 @@ protected:
 private:
     bool init();
     QRect iconGeometry();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    QWindow* mIconWindow;
+    QWidget* mContainer;
+#else
     Window mIconId;
     Window mWindowId;
+#endif
     bool mValid;
     QSize mIconSize;
     Damage mDamage;

@@ -71,8 +71,13 @@ int windowErrorHandler(Display *d, XErrorEvent *e)
  ************************************************/
 TrayIcon::TrayIcon(Window iconId, QWidget* parent):
     QFrame(parent),
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    mIconWindow(QWindow::fromWinId(iconId)),
+    mContainer(NULL),
+#else
     mIconId(iconId),
     mWindowId(0),
+#endif
     mIconSize(TRAY_ICON_SIZE_DEFAULT, TRAY_ICON_SIZE_DEFAULT),
     mDamage(0)
 {
@@ -88,6 +93,12 @@ TrayIcon::TrayIcon(Window iconId, QWidget* parent):
  ************************************************/
 bool TrayIcon::init()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    if(!mIconWindow)
+        return false;
+    mContainer = createWindowContainer(mIconWindow, this);
+    XSelectInput(QX11Info::display(), mIconWindow->winId(), StructureNotifyMask);
+#else // This is for Qt 4 only
     Display* dsp = QX11Info::display();
 
     XWindowAttributes attr;
@@ -178,6 +189,7 @@ bool TrayIcon::init()
     xfitMan().resizeWindow(mWindowId, mIconSize.width(), mIconSize.height());
     xfitMan().resizeWindow(mIconId,   mIconSize.width(), mIconSize.height());
 
+#endif
     return true;
 }
 
@@ -187,6 +199,13 @@ bool TrayIcon::init()
  ************************************************/
 TrayIcon::~TrayIcon()
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    qDebug() << "DELETE TRAY ICON";
+    if(mIconWindow)
+    {
+        delete mIconWindow;
+    }
+#else
     Display* dsp = QX11Info::display();
     XSelectInput(dsp, mIconId, NoEventMask);
 
@@ -203,6 +222,7 @@ TrayIcon::~TrayIcon()
     XDestroyWindow(dsp, mWindowId);
     XSync(dsp, False);
     XSetErrorHandler(old);
+#endif
 }
 
 
@@ -225,11 +245,17 @@ void TrayIcon::setIconSize(QSize iconSize)
 {
     mIconSize = iconSize;
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    // FIXME: set size?
+    if(mContainer)
+        mContainer->resize(mIconSize.width(), mIconSize.height());
+#else
     if (mWindowId)
         xfitMan().resizeWindow(mWindowId, mIconSize.width(), mIconSize.height());
 
     if (mIconId)
         xfitMan().resizeWindow(mIconId,   mIconSize.width(), mIconSize.height());
+#endif
 }
 
 
@@ -240,14 +266,20 @@ bool TrayIcon::event(QEvent *event)
 {
     switch (event->type())
     {
-    case QEvent::Paint:
-        draw(static_cast<QPaintEvent*>(event));
-        break;
+    //case QEvent::Paint:
+    //    draw(static_cast<QPaintEvent*>(event));
+    //    break;
 
     case QEvent::Resize:
     {
         QRect rect = iconGeometry();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+        // FIXME: handle resize?
+        if(mContainer)
+            mContainer->move(rect.left(), rect.top());
+#else
         xfitMan().moveWindow(mWindowId, rect.left(), rect.top());
+#endif
     }
         break;
 
@@ -282,6 +314,9 @@ QRect TrayIcon::iconGeometry()
  ************************************************/
 void TrayIcon::draw(QPaintEvent* /*event*/)
 {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    // FIXME: paint?
+#else
     Display* dsp = QX11Info::display();
 
     XWindowAttributes attr;
@@ -344,6 +379,7 @@ void TrayIcon::draw(QPaintEvent* /*event*/)
     if(ximage)
         XDestroyImage(ximage);
 //    debug << "End paint icon **********************************";
+#endif
 }
 
 
