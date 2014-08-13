@@ -58,7 +58,7 @@ public:
         AlignmentCenter =  0,
         AlignmentRight  =  1
     };
-
+    
     LxQtPanel(const QString &configGroup, QWidget *parent = 0);
     virtual ~LxQtPanel();
 

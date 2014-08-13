@@ -66,6 +66,7 @@ protected:
 
 private:
     bool init();
+    void uninit();
     QRect iconGeometry();
     Window mIconId;
     Window mWindowId;

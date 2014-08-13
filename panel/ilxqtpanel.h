@@ -35,6 +35,7 @@ class ILxQtPanelPlugin;
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <xcb/xcb.h>
+#include <QEvent>
 #define XEventType      xcb_generic_event_t
 #else
 #define XEventType      XEvent
@@ -54,6 +55,12 @@ public:
         PositionLeft,   //! The left side of the screen.
         PositionRight   //! The right side of the screen.
     };
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    enum CustomEventType {
+        WindowAboutToBeDestroyed = QEvent::User + 1
+    };
+#endif
 
     /**
      This property holds position of the panel.

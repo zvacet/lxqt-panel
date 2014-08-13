@@ -237,10 +237,16 @@ void LxQtPanel::screensChangeds()
     // However, it forgot to update the internal winId, so effectiveWinId() always return the olf value.
     // To workaround this bug, we destroy the window and create it again manually to force
     // update of the winId.
+    QList<QWidget*> trayIcons = findChildren<QWidget*>("TrayIcon");
+    Q_FOREACH(QWidget* trayIcon, trayIcons) {
+        QEvent event(QEvent::Type(ILxQtPanel::WindowAboutToBeDestroyed));
+        qApp->sendEvent(trayIcon, &event);
+    }
+    qDebug() << "destroy()";
     destroy(); // now internal winId becomes 0 and QEvent::WinIdChange is emitted
 #endif
-    if (! canPlacedOn(mScreenNum, mPosition))
-        setPosition(findAvailableScreen(mPosition), mPosition);
+    //if (! canPlacedOn(mScreenNum, mPosition))
+    //    setPosition(findAvailableScreen(mPosition), mPosition);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
     // workaround for Qt bug: 40681
     if(effectiveWinId() == 0)

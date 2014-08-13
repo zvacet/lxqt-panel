@@ -181,11 +181,11 @@ bool TrayIcon::init()
     return true;
 }
 
-
 /************************************************
 
  ************************************************/
-TrayIcon::~TrayIcon()
+
+void TrayIcon::uninit()
 {
     Display* dsp = QX11Info::display();
     XSelectInput(dsp, mIconId, NoEventMask);
@@ -201,8 +201,17 @@ TrayIcon::~TrayIcon()
     XReparentWindow(dsp, mIconId, QX11Info::appRootWindow(), 0, 0);
 
     XDestroyWindow(dsp, mWindowId);
+    mWindowId = 0;
     XSync(dsp, False);
     XSetErrorHandler(old);
+}
+
+/************************************************
+
+ ************************************************/
+TrayIcon::~TrayIcon()
+{
+    uninit();
 }
 
 
@@ -240,6 +249,23 @@ bool TrayIcon::event(QEvent *event)
 {
     switch (event->type())
     {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    // Qt 5 may destroy and re-create the underlying window sometimes
+    // We need to handle that. Currently, there is no way to know if the underlying
+    // window of the panel is going to be destroyed. It's a limitation of Qt, unfortunately.
+    // In LxQtPanel::screenChanges() we're forced to did some workarounds for a Qt 5 bug.
+    // We destroy the underlying window of the panel sometimes when the screen layout changes.
+    // Since Qt5 provides no notification for this, we emitted our own WindowAboutToBeDestroyed event.
+    case ILxQtPanel::WindowAboutToBeDestroyed:
+        qDebug() << "ILxQtPanel::WindowAboutToBeDestroyed";
+        uninit();
+        break;
+    case QEvent::WinIdChange:
+        qDebug() << "TrayIcon::WinIdChange" << effectiveWinId();
+        if(effectiveWinId())
+            init();
+        break;
+#endif
     case QEvent::Paint:
         draw(static_cast<QPaintEvent*>(event));
         break;
