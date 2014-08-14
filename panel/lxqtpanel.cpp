@@ -38,6 +38,11 @@
 #include <LXQt/Settings>
 #include <LXQt/PluginInfo>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include <QScreen>
+#include <QWindow>
+#endif
+
 #include <LXQt/XfitMan>
 #include <X11/Xatom.h>
 #include <QX11Info>
@@ -230,22 +235,8 @@ void LxQtPanel::saveSettings(bool later)
  ************************************************/
 void LxQtPanel::screensChangeds()
 {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    // workaround for Qt bug: 40681
-    // https://bugreports.qt-project.org/browse/QTBUG-40681
-    // Qt 5 seems to re-create the underlying window sometimes when the screen layout is changed.
-    // However, it forgot to update the internal winId, so effectiveWinId() always return the olf value.
-    // To workaround this bug, we destroy the window and create it again manually to force
-    // update of the winId.
-    destroy(); // now internal winId becomes 0 and QEvent::WinIdChange is emitted
-#endif
     if (! canPlacedOn(mScreenNum, mPosition))
         setPosition(findAvailableScreen(mPosition), mPosition);
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-    // workaround for Qt bug: 40681
-    if(effectiveWinId() == 0)
-        create(); // create the underlying window again manually, now QEvent::WinIdChange is emitted again.
-#endif
     // the screen size might be changed, let's update the reserved screen space.
     updateWmStrut();
 }
@@ -795,6 +786,14 @@ bool LxQtPanel::event(QEvent *event)
         // the winId() may be changed at runtime. So we need to reset all X11 properties
         // when this happens.
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+
+        if(windowHandle())
+        {
+            QScreen* screen = windowHandle()->screen();
+            connect(windowHandle(), SIGNAL(screenChanged(QScreen*)), SLOT(screenChanged(QScreen*)));
+            connect(screen, SIGNAL(destroyed(QObject*)), SLOT(screenDestroyed(QScreen*)));
+        }
+
         // Qt::WA_X11NetWmWindowTypeDock becomes ineffective in Qt 5
         // See QTBUG-39887: https://bugreports.qt-project.org/browse/QTBUG-39887
         // Let's do it manually
@@ -819,6 +818,34 @@ bool LxQtPanel::event(QEvent *event)
     return QFrame::event(event);
 }
 
+/************************************************
+
+ ************************************************/
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+
+void LxQtPanel::handleScreenDestroyed(QScreen* screen)
+{
+    // workaround for Qt bug: 40681
+    // https://bugreports.qt-project.org/browse/QTBUG-40681
+    // Qt 5 seems to re-create the underlying window sometimes when the screen layout is changed.
+    // However, it forgot to update the internal winId, so effectiveWinId() always return the olf value.
+    // To workaround this bug, we destroy the window and create it again manually to force
+    // update of the winId.
+
+    // this is called from LxQtPanelApplication, which is earlier than QWindow::screenDestroyed() slot.
+    // so we can destroy the window before Qt does it.
+    Q_EMIT aboutToDestroyWindow();
+    destroy(); // now internal winId becomes 0 and QEvent::WinIdChange is emitted
+}
+
+void LxQtPanel::screenChanged(QScreen* newScreen) {
+    // workaround for Qt bug: 40681
+    if(!windowHandle())
+        create(); // create the underlying window again manually, now QEvent::WinIdChange is emitted again.
+}
+
+#endif
 
 /************************************************
 

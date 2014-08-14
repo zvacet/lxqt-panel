@@ -93,6 +93,11 @@ public:
 
     LxQt::Settings *settings() const { return mSettings; }
 
+    
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void handleScreenDestroyed(QScreen* screen);
+#endif
+
 public slots:
     void show();
 
@@ -110,12 +115,19 @@ signals:
     void realigned();
     void deletedByUser(LxQtPanel *self);
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void aboutToDestroyWindow();
+#endif
+
 protected:
     bool event(QEvent *event);
     void showEvent(QShowEvent *event);
     
 private slots:
     void screensChangeds();
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void screenChanged(QScreen* newScreen);
+#endif
     void addPlugin(const LxQt::PluginInfo &desktopFile);
     void showConfigDialog();
     void showAddPluginDialog();
@@ -123,7 +135,6 @@ private slots:
     void removePlugin();
     void pluginMoved();
     void userRequestForDeletion();
-
 private:
     LxQtPanelLayout* mLayout;
     LxQt::Settings *mSettings;

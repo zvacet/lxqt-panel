@@ -34,6 +34,7 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QAbstractNativeEventFilter>
+class QScreen;
 #endif
 
 class LxQtPanel;
@@ -66,6 +67,11 @@ public:
 
 public slots:
     void addNewPanel();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void screenAdded(QScreen* newScreen);
+    void screenDestroyed(QObject* screenObj);
+#endif
 
 private:
     QList<LxQtPanel*> mPanels;

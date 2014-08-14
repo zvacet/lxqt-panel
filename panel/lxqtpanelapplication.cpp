@@ -33,6 +33,10 @@
 #include <QUuid>
 #include <X11/Xlib.h>
 
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#include <QScreen>
+#include <QWindow>
+#endif
 
 LxQtPanelApplication::LxQtPanelApplication(int& argc, char** argv, const QString &configFile)
     : LxQt::Application(argc, argv)
@@ -43,7 +47,13 @@ LxQtPanelApplication::LxQtPanelApplication(int& argc, char** argv, const QString
         mSettings = new LxQt::Settings(configFile, QSettings::IniFormat, this);
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-		qApp->installNativeEventFilter(this);
+    qApp->installNativeEventFilter(this);
+    
+    Q_FOREACH(QScreen* screen, screens())
+    {
+        connect(screen, &QScreen::destroyed, this, &LxQtPanelApplication::screenDestroyed);
+    }
+
 #endif
 
     QStringList panels = mSettings->value("panels").toStringList();
@@ -87,6 +97,25 @@ void LxQtPanelApplication::addPanel(const QString &name)
 }
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+
+void LxQtPanelApplication::screenAdded(QScreen* newScreen)
+{
+    connect(newScreen, &QScreen::destroyed, this, &LxQtPanelApplication::screenDestroyed);
+}
+
+void LxQtPanelApplication::screenDestroyed(QObject* screenObj)
+{
+    QScreen* screen = static_cast<QScreen*>(screenObj);
+    Q_FOREACH(LxQtPanel* panel, mPanels)
+    {
+        QWindow* panelWindow = panel->windowHandle();
+        if(panelWindow && panelWindow->screen() == screen)
+        {
+            // screen of this panel is destroyed
+            panel->handleScreenDestroyed(screen);
+        }
+    }
+}
 
 // Qt5 uses native event filter
 bool LxQtPanelApplication::nativeEventFilter(const QByteArray & eventType, void * message, long * result)
