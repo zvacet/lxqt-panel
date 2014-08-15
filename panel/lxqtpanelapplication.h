@@ -34,6 +34,8 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
 #include <QAbstractNativeEventFilter>
+#else
+struct QAbstractNativeEventFilter {};
 #endif
 
 class LxQtPanel;
@@ -41,12 +43,7 @@ namespace LxQt {
 class Settings;
 }
 
-class LxQtPanelApplication : public LxQt::Application
-#ifndef Q_MOC_RUN // Qt4 moc has some problem handling multiple inheritence with conditional compilation, disable it
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
-	, public QAbstractNativeEventFilter // we need to filter some native events in Qt5
-#endif
-#endif // Q_MOC_RUN
+class LxQtPanelApplication : public LxQt::Application, public QAbstractNativeEventFilter
 {
     Q_OBJECT
 public:
@@ -71,6 +68,13 @@ private:
     QList<LxQtPanel*> mPanels;
 
     void addPanel(const QString &name);
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+    void checkXRandR();
+    bool has_randr_extension;
+    int xrandr_first_event;
+    void handleXRandRChange();
+#endif
 
 private slots:
     void removePanel(LxQtPanel* panel);
