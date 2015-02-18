@@ -58,6 +58,7 @@ protected:
     void leaveEvent(QEvent *event);
     void wheelEvent(QWheelEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
+    void showEvent(QShowEvent* e);
 
 private slots:
     void toggleVolumeSlider();
@@ -72,6 +73,7 @@ private:
     bool m_showOnClick;
     bool m_muteOnMiddleClick;
     QString m_mixerCommand;
+    bool m_delayInited;
 };
 
 #endif // VOLUMEBUTTON_H

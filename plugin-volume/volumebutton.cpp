@@ -33,8 +33,10 @@
 #include <QSlider>
 #include <QMouseEvent>
 #include <QProcess>
+#include <QTimer>
 
 #include <XdgIcon>
+#include "lxqtvolume.h"
 #include "../panel/ilxqtpanel.h"
 #include "../panel/ilxqtpanelplugin.h"
 
@@ -43,7 +45,8 @@ VolumeButton::VolumeButton(ILxQtPanelPlugin *plugin, QWidget* parent):
         mPlugin(plugin),
         m_panel(plugin->panel()),
         m_showOnClick(true),
-        m_muteOnMiddleClick(true)
+        m_muteOnMiddleClick(true),
+        m_delayInited(false)
 {
     // initial icon for button. It will be replaced after devices scan.
     // In the worst case - no soundcard/pulse - is found it remains
@@ -114,6 +117,17 @@ void VolumeButton::mouseReleaseEvent(QMouseEvent *event)
     }
 
     QToolButton::mouseReleaseEvent(event);
+}
+
+void VolumeButton::showEvent(QShowEvent *e)
+{
+    QToolButton::showEvent(e);
+    if(!m_delayInited)
+    {
+        m_delayInited = true;
+        // slow stuff are initialized after the plugin becomes visible
+        QTimer::singleShot(500, static_cast<LxQtVolume*>(mPlugin), SLOT(delayInit()));
+    }
 }
 
 void VolumeButton::toggleVolumeSlider()

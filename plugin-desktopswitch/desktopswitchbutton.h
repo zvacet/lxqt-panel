@@ -46,6 +46,8 @@ public:
 
 public slots:
     void unregisterShortcut();
+    void registerShortcut();
+    void showEvent(QShowEvent* e);
 
 signals:
     void activated();
@@ -53,6 +55,8 @@ signals:
 private:
     GlobalKeyShortcut::Action * m_shortcut;
     int mIndex;
+    QString m_shortcutPath;
+    QString m_shortcutKey;
 };
 
 #endif

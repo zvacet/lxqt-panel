@@ -63,7 +63,8 @@ LxQtMainMenu::LxQtMainMenu(const ILxQtPanelPluginStartupInfo &startupInfo):
     ILxQtPanelPlugin(startupInfo),
     mMenu(0),
     mShortcut(0),
-    mLockCascadeChanges(false)
+    mLockCascadeChanges(false),
+    mPendingUpdateShortcuts(true)
 {
 #ifdef HAVE_MENU_CACHE
     mMenuCache = NULL;
@@ -80,9 +81,6 @@ LxQtMainMenu::LxQtMainMenu(const ILxQtPanelPluginStartupInfo &startupInfo):
     connect(&mButton, &QToolButton::clicked, this, &LxQtMainMenu::showMenu);
 
     settingsChanged();
-
-    connect(mShortcut, SIGNAL(activated()), &mDelayedPopup, SLOT(start()));
-    connect(mShortcut, SIGNAL(shortcutChanged(QString,QString)), this, SLOT(shortcutChanged(QString,QString)));
 }
 
 
@@ -228,17 +226,17 @@ void LxQtMainMenu::settingsChanged()
     }
 #endif
 
-    QString shortcut = settings()->value("shortcut", DEFAULT_SHORTCUT).toString();
-    if (shortcut.isEmpty())
-        shortcut = DEFAULT_SHORTCUT;
-
-    if (!mShortcut)
-        mShortcut = GlobalKeyShortcut::Client::instance()->addAction(shortcut, QString("/panel/%1/show_hide").arg(settings()->group()), tr("Show/hide main menu"), this);
-    else if (mShortcut->shortcut() != shortcut)
-    {
-        mShortcut->changeShortcut(shortcut);
-    }
-    mShortcutSeq = QKeySequence(shortcut);
+    mShortcutStr = settings()->value("shortcut", DEFAULT_SHORTCUT).toString();
+    if (mShortcutStr.isEmpty())
+        mShortcutStr = DEFAULT_SHORTCUT;
+    mShortcutSeq = QKeySequence(mShortcutStr);
+    // updating global shortcuts is very slow. If the plugin is not visible,
+    // we delay the handling until the plugin becomes visible to speed up panel startup.
+    // If the plugin is not visible, updateShortcuts() will be called when it gets QEvent::Show.
+    if(mButton.isVisible())
+        updateShortcuts();
+    else
+        mPendingUpdateShortcuts = true;
 
     realign();
 }
@@ -287,6 +285,22 @@ void LxQtMainMenu::buildMenu()
 }
 
 
+void LxQtMainMenu::updateShortcuts()
+{
+    qDebug() << "LxQtMainMenu::updateShortcuts()";
+    if (!mShortcut)
+    {
+        mShortcut = GlobalKeyShortcut::Client::instance()->addAction(mShortcutStr, QString("/panel/%1/show_hide").arg(settings()->group()), tr("Show/hide main menu"), this);
+        connect(mShortcut, SIGNAL(activated()), &mDelayedPopup, SLOT(start()));
+        connect(mShortcut, SIGNAL(shortcutChanged(QString,QString)), this, SLOT(shortcutChanged(QString,QString)));
+    }
+    else if (mShortcut->shortcut() != mShortcutStr)
+    {
+        mShortcut->changeShortcut(mShortcutStr);
+    }
+    qDebug() << "Finish LxQtMainMenu::updateShortcuts()";
+}
+
 /************************************************
 
  ************************************************/
@@ -316,6 +330,14 @@ bool LxQtMainMenu::eventFilter(QObject *obj, QEvent *event)
             // reset proxy style for the menus so they can apply the new styles
             mTopMenuStyle.setBaseStyle(NULL);
             mMenuStyle.setBaseStyle(NULL);
+        }
+        else if(event->type() == QEvent::Show)
+        {
+            if(mPendingUpdateShortcuts)
+            {
+                QTimer::singleShot(500, this, SLOT(updateShortcuts()));
+                mPendingUpdateShortcuts = false;
+            }
         }
     }
     else if(QMenu* menu = qobject_cast<QMenu*>(obj))

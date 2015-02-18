@@ -49,9 +49,11 @@ public:
     virtual QString themeId() const { return "ShowDesktop"; }
 private:
     GlobalKeyShortcut::Action * m_key;
+    bool eventFilter(QObject *obj, QEvent *ev);
 
 private slots:
     void toggleShowingDesktop();
+    void delayInit();
 
 private:
     QToolButton mButton;

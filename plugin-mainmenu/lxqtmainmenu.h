@@ -96,11 +96,14 @@ private:
     bool mLockCascadeChanges;
     QTimer mDelayedPopup;
     QKeySequence mShortcutSeq;
+    QString mShortcutStr;
+    bool mPendingUpdateShortcuts;
 
 protected slots:
 
     virtual void settingsChanged();
     void buildMenu();
+    void updateShortcuts();
 
 private slots:
     void showMenu();

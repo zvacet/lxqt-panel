@@ -51,6 +51,8 @@
 #include <KF5/KWindowSystem/KWindowSystem>
 #include <KF5/KWindowSystem/NETWM>
 
+#include <QElapsedTimer>
+
 // Config keys and groups
 #define CFG_KEY_SCREENNUM          "desktop"
 #define CFG_KEY_POSITION           "position"
@@ -309,6 +311,9 @@ void LxQtPanel::loadPlugins()
     QStringList sections = mSettings->value(CFG_KEY_PLUGINS).toStringList();
     mSettings->endGroup();
 
+    QElapsedTimer timer;
+    timer.start();
+    qint64 lastTime = 0;
     foreach (QString sect, sections)
     {
         QString type = mSettings->value(sect+"/type").toString();
@@ -326,6 +331,8 @@ void LxQtPanel::loadPlugins()
         }
 
         loadPlugin(list.first(), sect);
+        qDebug() << "load " << type << ": time: " << (timer.elapsed() - lastTime) << " ms";
+        lastTime = timer.elapsed();
     }
 }
 

@@ -34,6 +34,8 @@
 #include <KF5/KWindowSystem/KWindowSystem>
 #include <KF5/KWindowSystem/NETWM>
 #include "showdesktop.h"
+#include <QTimer>
+#include <QEvent>
 
 // Still needed for lxde/lxqt#338
 #include <X11/Xlib.h>
@@ -43,28 +45,15 @@
 
 ShowDesktop::ShowDesktop(const ILxQtPanelPluginStartupInfo &startupInfo) :
     QObject(),
-    ILxQtPanelPlugin(startupInfo)
+    ILxQtPanelPlugin(startupInfo),
+    m_key(NULL)
 {
-    m_key = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/show_hide").arg(settings()->group()), tr("Show desktop"), this);
-    if (m_key)
-    {
-        connect(m_key, SIGNAL(activated()), this, SLOT(toggleShowingDesktop()));
-
-        if (m_key->shortcut().isEmpty())
-        {
-            m_key->changeShortcut(DEFAULT_SHORTCUT);
-            if (m_key->shortcut().isEmpty())
-            {
-                LxQt::Notification::notify(tr("Show Desktop: Global shortcut '%1' cannot be registered").arg(DEFAULT_SHORTCUT));
-            }
-        }
-    }
-
     QAction * act = new QAction(XdgIcon::fromTheme("user-desktop"), tr("Show Desktop"), this);
     connect(act, SIGNAL(triggered()), this, SLOT(toggleShowingDesktop()));
 
     mButton.setDefaultAction(act);
     mButton.setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mButton.installEventFilter(this);
 }
 
 void ShowDesktop::toggleShowingDesktop()
@@ -96,6 +85,42 @@ void ShowDesktop::toggleShowingDesktop()
     xcb_send_event(QX11Info::connection(), false, QX11Info::appRootWindow(),
                    (XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY),
                    (const char *) &event);
+}
+
+bool ShowDesktop::eventFilter(QObject *obj, QEvent *ev)
+{
+    if(obj == &mButton)
+    {
+        if(ev->type() == QEvent::Show)
+        {
+            // slow stuff are initialized after the plugin becomes visible
+            QTimer::singleShot(500, this, SLOT(delayInit()));
+            mButton.removeEventFilter(this);
+        }
+    }
+    return QObject::eventFilter(obj, ev);
+}
+
+// Because the initialization of global shortcuts is very slow, we delay it
+// until the widget becomes visible.
+void ShowDesktop::delayInit()
+{
+    qDebug("ShowDesktop::delayInit");
+    m_key = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/show_hide").arg(settings()->group()), tr("Show desktop"), this);
+    if (m_key)
+    {
+        connect(m_key, SIGNAL(activated()), this, SLOT(toggleShowingDesktop()));
+
+        if (m_key->shortcut().isEmpty())
+        {
+            m_key->changeShortcut(DEFAULT_SHORTCUT);
+            if (m_key->shortcut().isEmpty())
+            {
+                LxQt::Notification::notify(tr("Show Desktop: Global shortcut '%1' cannot be registered").arg(DEFAULT_SHORTCUT));
+            }
+        }
+    }
+    qDebug("ShowDesktop::Finish");
 }
 
 #undef DEFAULT_SHORTCUT

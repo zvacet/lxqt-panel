@@ -44,6 +44,8 @@
 #include <XdgIcon>
 #include <lxqt-globalkeys.h>
 #include <LXQt/Notification>
+#include <QTimer>
+#include <QApplication>
 
 #define DEFAULT_UP_SHORTCUT "XF86AudioRaiseVolume"
 #define DEFAULT_DOWN_SHORTCUT "XF86AudioLowerVolume"
@@ -59,60 +61,6 @@ LxQtVolume::LxQtVolume(const ILxQtPanelPluginStartupInfo &startupInfo):
     m_volumeButton = new VolumeButton(this);
 
     m_notification = new LxQt::Notification("", this);
-
-    // global key shortcuts
-    QString shortcutNotRegistered;
-
-    m_keyVolumeUp = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/up").arg(settings()->group()), tr("Increase sound volume"), this);
-    if (m_keyVolumeUp)
-    {
-        connect(m_keyVolumeUp, SIGNAL(activated()), this, SLOT(handleShortcutVolumeUp()));
-
-        if (m_keyVolumeUp->shortcut().isEmpty())
-        {
-            m_keyVolumeUp->changeShortcut(DEFAULT_UP_SHORTCUT);
-            if (m_keyVolumeUp->shortcut().isEmpty())
-            {
-                shortcutNotRegistered = " '" DEFAULT_UP_SHORTCUT "'";
-            }
-        }
-    }
-
-    m_keyVolumeDown = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/down").arg(settings()->group()), tr("Decrease sound volume"), this);
-    if (m_keyVolumeDown)
-    {
-        connect(m_keyVolumeDown, SIGNAL(activated()), this, SLOT(handleShortcutVolumeDown()));
-
-        if (m_keyVolumeDown->shortcut().isEmpty())
-        {
-            m_keyVolumeDown->changeShortcut(DEFAULT_DOWN_SHORTCUT);
-            if (m_keyVolumeDown->shortcut().isEmpty())
-            {
-                shortcutNotRegistered += " '" DEFAULT_DOWN_SHORTCUT "'";
-            }
-        }
-    }
-
-    m_keyMuteToggle = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/mute").arg(settings()->group()), tr("Mute/unmute sound volume"), this);
-    if (m_keyMuteToggle)
-    {
-        connect(m_keyMuteToggle, SIGNAL(activated()), this, SLOT(handleShortcutVolumeMute()));
-
-        if (m_keyMuteToggle->shortcut().isEmpty())
-        {
-            m_keyMuteToggle->changeShortcut(DEFAULT_MUTE_SHORTCUT);
-            if (m_keyMuteToggle->shortcut().isEmpty())
-            {
-                shortcutNotRegistered += " '" DEFAULT_MUTE_SHORTCUT "'";
-            }
-        }
-    }
-
-    if(!shortcutNotRegistered.isEmpty())
-    {
-        m_notification->setSummary(tr("Volume Control: The following shortcuts can not be registered: %1").arg(shortcutNotRegistered));
-        m_notification->update();
-    }
 
     m_notification->setTimeout(1000);
     m_notification->setUrgencyHint(LxQt::Notification::UrgencyLow);
@@ -219,6 +167,74 @@ void LxQtVolume::handleShortcutVolumeMute()
 {
     if (m_defaultSink)
         m_defaultSink->toggleMute();
+}
+
+// Because the initialization of global shortcuts is very slow, we delay it
+// until the widget becomes visible.
+// This slot will be called by VolumeButton::showEvent()
+void LxQtVolume::delayInit()
+{
+    qDebug("LxQtVolume::delayInit()");
+    // global key shortcuts
+    QString shortcutNotRegistered;
+
+    m_keyVolumeUp = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/up").arg(settings()->group()), tr("Increase sound volume"), this);
+    if (m_keyVolumeUp)
+    {
+        connect(m_keyVolumeUp, SIGNAL(activated()), this, SLOT(handleShortcutVolumeUp()));
+
+        if (m_keyVolumeUp->shortcut().isEmpty())
+        {
+            m_keyVolumeUp->changeShortcut(DEFAULT_UP_SHORTCUT);
+            if (m_keyVolumeUp->shortcut().isEmpty())
+            {
+                shortcutNotRegistered = " '" DEFAULT_UP_SHORTCUT "'";
+            }
+        }
+    }
+
+    // handle events since we already blocked for a while
+    qApp->processEvents();
+
+    m_keyVolumeDown = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/down").arg(settings()->group()), tr("Decrease sound volume"), this);
+    if (m_keyVolumeDown)
+    {
+        connect(m_keyVolumeDown, SIGNAL(activated()), this, SLOT(handleShortcutVolumeDown()));
+
+        if (m_keyVolumeDown->shortcut().isEmpty())
+        {
+            m_keyVolumeDown->changeShortcut(DEFAULT_DOWN_SHORTCUT);
+            if (m_keyVolumeDown->shortcut().isEmpty())
+            {
+                shortcutNotRegistered += " '" DEFAULT_DOWN_SHORTCUT "'";
+            }
+        }
+    }
+
+    // handle events since we already blocked for a while
+    qApp->processEvents();
+
+    m_keyMuteToggle = GlobalKeyShortcut::Client::instance()->addAction(QString(), QString("/panel/%1/mute").arg(settings()->group()), tr("Mute/unmute sound volume"), this);
+    if (m_keyMuteToggle)
+    {
+        connect(m_keyMuteToggle, SIGNAL(activated()), this, SLOT(handleShortcutVolumeMute()));
+
+        if (m_keyMuteToggle->shortcut().isEmpty())
+        {
+            m_keyMuteToggle->changeShortcut(DEFAULT_MUTE_SHORTCUT);
+            if (m_keyMuteToggle->shortcut().isEmpty())
+            {
+                shortcutNotRegistered += " '" DEFAULT_MUTE_SHORTCUT "'";
+            }
+        }
+    }
+
+    if(!shortcutNotRegistered.isEmpty())
+    {
+        m_notification->setSummary(tr("Volume Control: The following shortcuts can not be registered: %1").arg(shortcutNotRegistered));
+        m_notification->update();
+    }
+    qDebug("Finish LxQtVolume::delayInit()");
 }
 
 QWidget *LxQtVolume::widget()
